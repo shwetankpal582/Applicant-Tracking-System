@@ -24,26 +24,30 @@ const Upload = () => {
     const handleAnalyze = async ({ file }: { file: File  }) => {
         try {
             setIsProcessing(true);
-
             setStatusText('Uploading the file...');
+
             const uploadedFile = await fs.upload([file]);
             if(!uploadedFile) {
                 addToast({ type: 'error', message: 'Failed to upload file. Please try again.' });
-                return setStatusText('Error: Failed to upload file');
+                setStatusText('Error: Failed to upload file');
+                return;
             }
 
             setStatusText('Converting to image...');
             const imageFile = await convertPdfToImage(file);
             if(!imageFile.file) {
-                addToast({ type: 'error', message: 'Failed to convert PDF to image. Please check your file.' });
-                return setStatusText('Error: Failed to convert PDF to image');
+                const errorMsg = imageFile.error || 'Failed to convert PDF to image. Please check your file.';
+                addToast({ type: 'error', message: errorMsg });
+                setStatusText(`Error: ${errorMsg}`);
+                return;
             }
 
             setStatusText('Uploading the image...');
             const uploadedImage = await fs.upload([imageFile.file]);
             if(!uploadedImage) {
                 addToast({ type: 'error', message: 'Failed to upload image. Please try again.' });
-                return setStatusText('Error: Failed to upload image');
+                setStatusText('Error: Failed to upload image');
+                return;
             }
 
             setStatusText('Preparing data...');
@@ -64,24 +68,33 @@ const Upload = () => {
             );
             if (!feedback) {
                 addToast({ type: 'error', message: 'Failed to analyze resume. Please try again.' });
-                return setStatusText('Error: Failed to analyze resume');
+                setStatusText('Error: Failed to analyze resume');
+                return;
             }
 
             const feedbackText = typeof feedback.message.content === 'string'
                 ? feedback.message.content
                 : feedback.message.content[0].text;
 
-            data.feedback = JSON.parse(feedbackText);
+            try {
+                data.feedback = JSON.parse(feedbackText);
+            } catch (parseError) {
+                console.error('Failed to parse feedback:', parseError);
+                addToast({ type: 'error', message: 'Failed to parse analysis results. Please try again.' });
+                setStatusText('Error: Failed to parse analysis results');
+                return;
+            }
+
             await kv.set(`resume:${uuid}`, JSON.stringify(data));
             setStatusText('Analysis complete, redirecting...');
             
             addToast({ type: 'success', message: 'Resume analyzed successfully!' });
-            console.log(data);
             navigate(`/resume/${uuid}`);
         } catch (error) {
             console.error('Upload error:', error);
-            addToast({ type: 'error', message: 'An unexpected error occurred. Please try again.' });
-            setStatusText('Error: An unexpected error occurred');
+            const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.';
+            addToast({ type: 'error', message: errorMessage });
+            setStatusText(`Error: ${errorMessage}`);
         } finally {
             setIsProcessing(false);
         }

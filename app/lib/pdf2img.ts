@@ -37,6 +37,13 @@ function waitForIdle(): Promise<void> {
     });
 }
 
+// Helper function to yield control back to the browser
+function yieldToMain(): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(() => resolve(), 0);
+    });
+}
+
 export async function convertPdfToImage(
     file: File
 ): Promise<PdfConversionResult> {
@@ -46,12 +53,19 @@ export async function convertPdfToImage(
         
         const lib = await loadPdfJs();
 
+        // Yield control after loading PDF.js
+        await yieldToMain();
+
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await lib.getDocument({ data: arrayBuffer }).promise;
+        
+        // Yield control after loading PDF
+        await yieldToMain();
+        
         const page = await pdf.getPage(1);
 
-        // Reduce scale to improve performance (was 4, now 2)
-        const viewport = page.getViewport({ scale: 2 });
+        // Reduce scale to improve performance (was 4, now 1.5 for better balance)
+        const viewport = page.getViewport({ scale: 1.5 });
         const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d");
 
@@ -65,7 +79,18 @@ export async function convertPdfToImage(
 
         // Use requestIdleCallback for rendering
         await waitForIdle();
-        await page.render({ canvasContext: context!, viewport }).promise;
+        
+        // Break up the rendering process to prevent blocking
+        const renderTask = page.render({ 
+            canvasContext: context!, 
+            viewport,
+            // Add interrupt handling for better performance
+            intent: 'display'
+        });
+        
+        // Yield control during rendering
+        await yieldToMain();
+        await renderTask.promise;
 
         return new Promise((resolve) => {
             // Use requestIdleCallback for blob creation
@@ -92,7 +117,7 @@ export async function convertPdfToImage(
                         }
                     },
                     "image/png",
-                    0.8 // Reduced quality for better performance
+                    0.7 // Further reduced quality for better performance
                 );
             };
 
@@ -103,6 +128,7 @@ export async function convertPdfToImage(
             }
         });
     } catch (err) {
+        console.error('PDF conversion error:', err);
         return {
             imageUrl: "",
             file: null,
