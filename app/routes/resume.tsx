@@ -20,34 +20,56 @@ const Resume = () => {
 
     useEffect(() => {
         if(!isLoading && !auth.isAuthenticated) navigate(`/auth?next=/resume/${id}`);
-    }, [isLoading])
+    }, [isLoading, auth.isAuthenticated, navigate, id])
 
     useEffect(() => {
         const loadResume = async () => {
-            const resume = await kv.get(`resume:${id}`);
+            try {
+                const resume = await kv.get(`resume:${id}`);
+                if(!resume) return;
 
-            if(!resume) return;
+                const data = JSON.parse(resume);
 
-            const data = JSON.parse(resume);
+                const resumeBlob = await fs.read(data.resumePath);
+                if(!resumeBlob) return;
 
-            const resumeBlob = await fs.read(data.resumePath);
-            if(!resumeBlob) return;
+                const pdfBlob = new Blob([resumeBlob], { type: 'application/pdf' });
+                
+                // Clean up previous URLs
+                setResumeUrl(prev => {
+                    if (prev) URL.revokeObjectURL(prev);
+                    return URL.createObjectURL(pdfBlob);
+                });
 
-            const pdfBlob = new Blob([resumeBlob], { type: 'application/pdf' });
-            const resumeUrl = URL.createObjectURL(pdfBlob);
-            setResumeUrl(resumeUrl);
+                const imageBlob = await fs.read(data.imagePath);
+                if(!imageBlob) return;
+                
+                setImageUrl(prev => {
+                    if (prev) URL.revokeObjectURL(prev);
+                    return URL.createObjectURL(imageBlob);
+                });
 
-            const imageBlob = await fs.read(data.imagePath);
-            if(!imageBlob) return;
-            const imageUrl = URL.createObjectURL(imageBlob);
-            setImageUrl(imageUrl);
-
-            setFeedback(data.feedback);
-            console.log({resumeUrl, imageUrl, feedback: data.feedback });
+                setFeedback(data.feedback);
+                console.log({resumeUrl, imageUrl, feedback: data.feedback });
+            } catch (error) {
+                console.error('Failed to load resume:', error);
+            }
         }
 
         loadResume();
-    }, [id]);
+        
+        // Cleanup function to revoke URLs when component unmounts
+        return () => {
+            setResumeUrl(prev => {
+                if (prev) URL.revokeObjectURL(prev);
+                return '';
+            });
+            setImageUrl(prev => {
+                if (prev) URL.revokeObjectURL(prev);
+                return '';
+            });
+        };
+    }, [id, kv, fs]);
 
     return (
         <main className="!pt-0">

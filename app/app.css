@@ -51,7 +51,8 @@ form {
 
 @layer components {
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#AB8C95] via-[#000000] to-[#8E97C5];
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#AB8C95] to-[#8E97C5];
+    /* Simplified gradient for better performance */
   }
   .gradient-border {
     @apply bg-gradient-to-b from-light-blue-100 to-light-blue-200 p-4 rounded-2xl;
@@ -75,17 +76,17 @@ form {
     @apply primary-gradient rounded-full py-4 px-8 cursor-pointer w-[600px] max-md:w-full text-3xl font-semibold text-white;
   }
   .main-section {
-    @apply flex flex-col items-center gap-8 pt-12 mx-15 pb-5;
+    @apply flex flex-col items-center gap-6 sm:gap-8 pt-8 sm:pt-12 mx-4 sm:mx-15 pb-5;
   }
   .page-heading {
     @apply flex flex-col items-center gap-8 max-w-4xl text-center;
   }
   .resumes-section {
-    @apply flex flex-wrap max-lg:flex-col gap-6 items-start  w-full max-w-[1850px] justify-evenly;
+    @apply flex flex-wrap max-lg:flex-col gap-4 sm:gap-6 items-start w-full max-w-[1850px] justify-center sm:justify-evenly px-4 sm:px-0;
   }
 
   .resume-card {
-    @apply flex flex-col gap-8 h-[560px] w-full lg:w-[450px] xl:w-[490px] bg-white rounded-2xl p-4;
+    @apply flex flex-col gap-6 h-auto min-h-[480px] w-full sm:w-[400px] lg:w-[450px] xl:w-[490px] bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200;
   }
 
   .resume-card-header {
@@ -97,7 +98,7 @@ form {
   }
 
   .navbar {
-    @apply flex flex-row justify-between items-center bg-white rounded-full p-4 w-full px-10 max-w-[1200px] mx-auto;
+    @apply flex flex-row justify-between items-center bg-white rounded-full p-3 sm:p-4 w-full px-4 sm:px-10 max-w-[1200px] mx-auto;
   }
 
   .score-badge {
@@ -121,7 +122,8 @@ form {
 }
 
 @utility text-gradient {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-[#AB8C95] via-[#000000] to-[#8E97C5];
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-[#AB8C95] to-[#8E97C5];
+  /* Simplified gradient for better performance */
 }
 
 @utility gradient-hover {
@@ -138,8 +140,8 @@ form {
 }
 
 @utility inset-shadow {
-  box-shadow: inset 0 0 12px 0 rgba(36, 99, 235, 0.2);
-  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 8px 0 rgba(36, 99, 235, 0.15);
+  /* Removed backdrop-filter for better performance */
 }
 
 @keyframes fadeIn {

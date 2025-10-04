@@ -104,15 +104,6 @@ export const usePuterStore = create<PuterStore>((set, get) => {
         set({
             error: msg,
             isLoading: false,
-            auth: {
-                user: null,
-                isAuthenticated: false,
-                signIn: get().auth.signIn,
-                signOut: get().auth.signOut,
-                refreshUser: get().auth.refreshUser,
-                checkAuthStatus: get().auth.checkAuthStatus,
-                getUser: get().auth.getUser,
-            },
         });
     };
 
@@ -249,16 +240,20 @@ export const usePuterStore = create<PuterStore>((set, get) => {
             return;
         }
 
-        const interval = setInterval(() => {
+        let intervalId: NodeJS.Timeout | null = null;
+        let timeoutId: NodeJS.Timeout | null = null;
+
+        intervalId = setInterval(() => {
             if (getPuter()) {
-                clearInterval(interval);
+                if (intervalId) clearInterval(intervalId);
+                if (timeoutId) clearTimeout(timeoutId);
                 set({ puterReady: true });
                 checkAuthStatus();
             }
         }, 100);
 
-        setTimeout(() => {
-            clearInterval(interval);
+        timeoutId = setTimeout(() => {
+            if (intervalId) clearInterval(intervalId);
             if (!getPuter()) {
                 setError("Puter.js failed to load within 10 seconds");
             }
@@ -321,7 +316,6 @@ export const usePuterStore = create<PuterStore>((set, get) => {
             setError("Puter.js not available");
             return;
         }
-        // return puter.ai.chat(prompt, imageURL, testMode, options);
         return puter.ai.chat(prompt, imageURL, testMode, options) as Promise<
             AIResponse | undefined
         >;

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <rect x="40" y="40" width="720" height="370" rx="10" fill="#f8fafc" stroke="#e6eef7"/>
+  <text x="400" y="120" font-family="Inter, Arial, sans-serif" font-size="26" fill="#0f172a" text-anchor="middle">Score panel placeholder</text>
+  <circle cx="400" cy="240" r="80" fill="#eef2ff" stroke="#c7d2fe"/>
+  <text x="400" y="250" font-family="Inter, Arial, sans-serif" font-size="28" fill="#4338ca" text-anchor="middle">82</text>
+  <text x="400" y="285" font-family="Inter, Arial, sans-serif" font-size="12" fill="#6b7280" text-anchor="middle">Overall score</text>
+</svg>

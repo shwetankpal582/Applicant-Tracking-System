@@ -25,17 +25,33 @@ async function loadPdfJs(): Promise<any> {
     return loadPromise;
 }
 
+// Helper function to wait for idle time
+function waitForIdle(): Promise<void> {
+    return new Promise((resolve) => {
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => resolve(), { timeout: 5000 });
+        } else {
+            // Fallback for browsers without requestIdleCallback
+            setTimeout(() => resolve(), 0);
+        }
+    });
+}
+
 export async function convertPdfToImage(
     file: File
 ): Promise<PdfConversionResult> {
     try {
+        // Wait for idle time before starting heavy processing
+        await waitForIdle();
+        
         const lib = await loadPdfJs();
 
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await lib.getDocument({ data: arrayBuffer }).promise;
         const page = await pdf.getPage(1);
 
-        const viewport = page.getViewport({ scale: 4 });
+        // Reduce scale to improve performance (was 4, now 2)
+        const viewport = page.getViewport({ scale: 2 });
         const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d");
 
@@ -44,36 +60,47 @@ export async function convertPdfToImage(
 
         if (context) {
             context.imageSmoothingEnabled = true;
-            context.imageSmoothingQuality = "high";
+            context.imageSmoothingQuality = "medium"; // Reduced from "high"
         }
 
+        // Use requestIdleCallback for rendering
+        await waitForIdle();
         await page.render({ canvasContext: context!, viewport }).promise;
 
         return new Promise((resolve) => {
-            canvas.toBlob(
-                (blob) => {
-                    if (blob) {
-                        // Create a File from the blob with the same name as the pdf
-                        const originalName = file.name.replace(/\.pdf$/i, "");
-                        const imageFile = new File([blob], `${originalName}.png`, {
-                            type: "image/png",
-                        });
+            // Use requestIdleCallback for blob creation
+            const createBlob = () => {
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob) {
+                            // Create a File from the blob with the same name as the pdf
+                            const originalName = file.name.replace(/\.pdf$/i, "");
+                            const imageFile = new File([blob], `${originalName}.png`, {
+                                type: "image/png",
+                            });
 
-                        resolve({
-                            imageUrl: URL.createObjectURL(blob),
-                            file: imageFile,
-                        });
-                    } else {
-                        resolve({
-                            imageUrl: "",
-                            file: null,
-                            error: "Failed to create image blob",
-                        });
-                    }
-                },
-                "image/png",
-                1.0
-            ); // Set quality to maximum (1.0)
+                            resolve({
+                                imageUrl: URL.createObjectURL(blob),
+                                file: imageFile,
+                            });
+                        } else {
+                            resolve({
+                                imageUrl: "",
+                                file: null,
+                                error: "Failed to create image blob",
+                            });
+                        }
+                    },
+                    "image/png",
+                    0.8 // Reduced quality for better performance
+                );
+            };
+
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(createBlob, { timeout: 3000 });
+            } else {
+                setTimeout(createBlob, 0);
+            }
         });
     } catch (err) {
         return {

@@ -1,6 +1,8 @@
 import type { Route } from "./+types/home";
 import Navbar from "~/components/Navbar";
 import ResumeCard from "~/components/ResumeCard";
+import { ResumeCardSkeleton } from "~/components/Skeleton";
+import EmptyState from "~/components/EmptyState";
 import {usePuterStore} from "~/lib/puter";
 import {Link, useNavigate} from "react-router";
 import {useEffect, useState} from "react";
@@ -20,24 +22,30 @@ export default function Home() {
 
   useEffect(() => {
     if(!auth.isAuthenticated) navigate('/auth?next=/');
-  }, [auth.isAuthenticated])
+  }, [auth.isAuthenticated, navigate])
 
   useEffect(() => {
     const loadResumes = async () => {
       setLoadingResumes(true);
 
-      const resumes = (await kv.list('resume:*', true)) as KVItem[];
+      try {
+        const resumes = (await kv.list('resume:*', true)) as KVItem[];
 
-      const parsedResumes = resumes?.map((resume) => (
-          JSON.parse(resume.value) as Resume
-      ))
+        const parsedResumes = resumes?.map((resume) => (
+            JSON.parse(resume.value) as Resume
+        ))
 
-      setResumes(parsedResumes || []);
-      setLoadingResumes(false);
+        setResumes(parsedResumes || []);
+      } catch (error) {
+        console.error('Failed to load resumes:', error);
+        setResumes([]);
+      } finally {
+        setLoadingResumes(false);
+      }
     }
 
     loadResumes()
-  }, []);
+  }, [kv]);
 
   return <main className="bg-[url('/images/bg-main.svg')] bg-cover">
     <Navbar />
@@ -45,32 +53,30 @@ export default function Home() {
     <section className="main-section">
       <div className="page-heading py-16">
         <h1>Track Your Applications & Resume Ratings</h1>
-        {!loadingResumes && resumes?.length === 0 ? (
-            <h2>No resumes found. Upload your first resume to get feedback.</h2>
-        ): (
-          <h2>Review your submissions and check AI-powered feedback.</h2>
-        )}
+        <h2>Review your submissions and check AI-powered feedback.</h2>
       </div>
-      {loadingResumes && (
-          <div className="flex flex-col items-center justify-center">
-            <img src="/images/resume-scan-2.gif" className="w-[200px]" />
-          </div>
-      )}
-
-      {!loadingResumes && resumes.length > 0 && (
+      {loadingResumes ? (
+        <div className="resumes-section">
+          {[1, 2, 3].map((i) => (
+            <ResumeCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : resumes.length > 0 ? (
         <div className="resumes-section">
           {resumes.map((resume) => (
               <ResumeCard key={resume.id} resume={resume} />
           ))}
         </div>
-      )}
-
-      {!loadingResumes && resumes?.length === 0 && (
-          <div className="flex flex-col items-center justify-center mt-10 gap-4">
-            <Link to="/upload" className="primary-button w-fit text-xl font-semibold">
-              Upload Resume
-            </Link>
-          </div>
+      ) : (
+        <EmptyState
+          variant="resume"
+          title="No resumes found"
+          description="Upload your first resume to get AI-powered feedback and improve your job application success."
+          action={{
+            label: "Upload Resume",
+            href: "/upload"
+          }}
+        />
       )}
     </section>
   </main>
