@@ -46,6 +46,8 @@ interface PuterStore {
     isLoading: boolean;
     error: string | null;
     puterReady: boolean;
+    credits: number;
+    activeJobs: Record<string, 'pending' | 'processing' | 'completed' | 'failed'>;
     auth: {
         user: PuterUser | null;
         isAuthenticated: boolean;
@@ -94,6 +96,9 @@ interface PuterStore {
 
     init: () => void;
     clearError: () => void;
+    refreshCredits: () => Promise<void>;
+    deductCredit: () => Promise<boolean>;
+    updateJobStatus: (id: string, status: 'pending' | 'processing' | 'completed' | 'failed') => Promise<void>;
 }
 
 const getPuter = (): typeof window.puter | null =>
@@ -409,6 +414,8 @@ export const usePuterStore = create<PuterStore>((set, get) => {
         isLoading: true,
         error: null,
         puterReady: false,
+        credits: 3, // Default free credits
+        activeJobs: {},
         auth: {
             user: null,
             isAuthenticated: false,
@@ -443,6 +450,36 @@ export const usePuterStore = create<PuterStore>((set, get) => {
             list: (pattern: string, returnValues?: boolean) =>
                 listKV(pattern, returnValues),
             flush: () => flushKV(),
+        },
+        refreshCredits: async () => {
+            const kv = get().kv;
+            const user = get().auth.user;
+            if (!user) return;
+            const current = await kv.get(`credits:${user.id}`);
+            if (current !== null && current !== undefined) {
+                set({ credits: parseInt(current) });
+            } else {
+                await kv.set(`credits:${user.id}`, '3');
+                set({ credits: 3 });
+            }
+        },
+        deductCredit: async () => {
+            const kv = get().kv;
+            const user = get().auth.user;
+            const credits = get().credits;
+            if (!user || credits <= 0) return false;
+
+            const newCredits = credits - 1;
+            await kv.set(`credits:${user.id}`, newCredits.toString());
+            set({ credits: newCredits });
+            return true;
+        },
+        updateJobStatus: async (id: string, status: 'pending' | 'processing' | 'completed' | 'failed') => {
+            const kv = get().kv;
+            await kv.set(`job:${id}`, status);
+            set((state: PuterStore) => ({
+                activeJobs: { ...state.activeJobs, [id]: status }
+            }));
         },
         init,
         clearError: () => set({ error: null }),

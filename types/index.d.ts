@@ -5,10 +5,57 @@ interface Resume {
     feedback: Feedback;
     companyName?: string;
     jobTitle?: string;
+    atsType?: string;
+    jobDescription?: string;
+    fileHash?: string;
+    timestamp?: number;
 }
 
 interface Feedback {
     overallScore: number;
+    atsSpecific: {
+        keywordDensity: number;
+        sectionStructure: number;
+        experienceRelevance: number;
+        formattingParsability: number;
+        actionVerbStrength: number;
+        passProbability: "High" | "Medium" | "Low";
+        riskFlags: string[];
+    };
+    jobAlignment?: {
+        matchingKeywords: string[];
+        missingKeywords: string[];
+        alignmentScore: number;
+        weakSections: string[];
+    };
+    fixItMode: {
+        original: string;
+        improved: string;
+        reason: string;
+    }[];
+    persona: {
+        type: "Fresher" | "Experienced" | "Career Switcher" | "Managerial";
+        description: string;
+    };
+    rejectionSimulation: {
+        reason: string;
+        severity: "Critical" | "Major" | "Minor";
+    }[];
+    intelligence: {
+        passiveVoicePercentage: number;
+        quantificationScore: number;
+        leadershipScore: number;
+    };
+    heatmapZones: {
+        type: "risk" | "neutral" | "strength";
+        label: string;
+        explanation: string;
+        top: number;
+        left: number;
+        width: number;
+        height: number;
+    }[];
+    // Legacy support (to be phased out or updated)
     ATS: {
         score: number;
         tips: {
